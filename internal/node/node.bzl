@@ -21,11 +21,10 @@ a `module_name` attribute can be `require`d by that name.
 """
 
 load("@build_bazel_rules_nodejs//:declaration_provider.bzl", "DeclarationInfo")
-load("@build_bazel_rules_nodejs//:providers.bzl", "JSTransitiveModuleInfo")
-load("@build_bazel_rules_nodejs//internal/common:node_module_info.bzl", "NodeModuleInfo")
+load("@build_bazel_rules_nodejs//:providers.bzl", "JSModuleInfo")
+load("@build_bazel_rules_nodejs//internal/common:node_module_info.bzl", "NodeModuleInfo", "node_modules_aspect")
 load("//internal/common:expand_into_runfiles.bzl", "expand_location_into_runfiles", "expand_path_into_runfiles")
 load("//internal/common:module_mappings.bzl", "module_mappings_runtime_aspect")
-load("//internal/common:sources_aspect.bzl", "sources_aspect")
 load("//internal/common:windows_utils.bzl", "create_windows_native_launcher_script", "is_windows")
 
 def _trim_package_node_modules(package_name):
@@ -144,8 +143,8 @@ def _nodejs_binary_impl(ctx):
     for d in ctx.attr.data:
         if DeclarationInfo in d:
             sources = depset(transitive = [sources, d[DeclarationInfo].transitive_declarations])
-        if JSTransitiveModuleInfo in d:
-            sources = depset(transitive = [sources, d[JSTransitiveModuleInfo].sources])
+        if JSModuleInfo in d:
+            sources = depset(transitive = [sources, d[JSModuleInfo].sources])
         if hasattr(d, "files"):
             sources = depset(transitive = [sources, d.files])
 
@@ -271,7 +270,7 @@ _NODEJS_EXECUTABLE_ATTRS = {
     "data": attr.label_list(
         doc = """Runtime dependencies which may be loaded during execution.""",
         allow_files = True,
-        aspects = [sources_aspect, module_mappings_runtime_aspect],
+        aspects = [node_modules_aspect, module_mappings_runtime_aspect],
     ),
     "entry_point": attr.label(
         doc = """The script which should be executed first, usually containing a main function.
